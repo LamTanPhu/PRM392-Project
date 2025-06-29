@@ -5,22 +5,35 @@ import com.example.project_prm392.model.User
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class LoginController(private val repository: AppRepository) {
     fun login(
         username: String,
         password: String,
-        onSuccess: () -> Unit,
+        onSuccess: (User) -> Unit, // Return the user object
         onError: (String) -> Unit
     ) {
         CoroutineScope(Dispatchers.IO).launch {
-            val user = repository.getUserByUsername(username)
-            if (user == null) {
-                onError("User not found")
-            } else if (user.passwordHash != password) { // Replace with proper hash check in production
-                onError("Incorrect password")
-            } else {
-                onSuccess()
+            try {
+                val user = repository.getUserByUsername(username)
+                if (user == null) {
+                    withContext(Dispatchers.Main) {
+                        onError("User not found")
+                    }
+                } else if (user.passwordHash != password) { // Replace with proper hash check in production
+                    withContext(Dispatchers.Main) {
+                        onError("Incorrect password")
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        onSuccess(user) // Pass the user object
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    onError("Login failed: ${e.message}")
+                }
             }
         }
     }
