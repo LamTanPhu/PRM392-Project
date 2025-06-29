@@ -16,6 +16,7 @@ fun LoginScreen(navController: NavController, controller: LoginController) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -28,7 +29,8 @@ fun LoginScreen(navController: NavController, controller: LoginController) {
             value = username,
             onValueChange = { username = it },
             label = { Text("Username") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading
         )
         Spacer(modifier = Modifier.height(8.dp))
         TextField(
@@ -36,19 +38,37 @@ fun LoginScreen(navController: NavController, controller: LoginController) {
             onValueChange = { password = it },
             label = { Text("Password") },
             visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading
         )
         Spacer(modifier = Modifier.height(16.dp))
         Button(
             onClick = {
+                isLoading = true
+                errorMessage = ""
                 controller.login(username, password,
-                    onSuccess = { navController.navigate("product_list") },
-                    onError = { errorMessage = it }
+                    onSuccess = { user ->
+                        isLoading = false
+                        // You can pass the user ID or store it in a shared preference/data store
+                        navController.navigate("product_list")
+                    },
+                    onError = {
+                        isLoading = false
+                        errorMessage = it
+                    }
                 )
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading && username.isNotBlank() && password.isNotBlank()
         ) {
-            Text("Login")
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+            Text(if (isLoading) "Logging in..." else "Login")
         }
         if (errorMessage.isNotEmpty()) {
             Spacer(modifier = Modifier.height(8.dp))
@@ -56,7 +76,8 @@ fun LoginScreen(navController: NavController, controller: LoginController) {
         }
         TextButton(
             onClick = { navController.navigate("signup") },
-            modifier = Modifier.align(Alignment.CenterHorizontally)
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            enabled = !isLoading
         ) {
             Text("Don't have an account? Sign Up")
         }
