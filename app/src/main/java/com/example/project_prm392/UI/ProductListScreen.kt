@@ -80,7 +80,7 @@ fun ProductListScreen(
                     // Cart icon with badge
                     Box {
                         IconButton(
-                            onClick = { navController.navigate("cart") }
+                            onClick = { navController.navigate("cart/$currentUserId") }
                         ) {
                             Icon(Icons.Default.ShoppingCart, contentDescription = "Cart")
                         }

@@ -19,12 +19,13 @@ fun LoginScreen(navController: NavController, viewModel: LoginViewModel) {
     val loginState by viewModel.loginState.collectAsState()
 
     LaunchedEffect(loginState) {
-        when (loginState) {
+        when (val state = loginState) {
             is LoginState.Success -> {
                 viewModel.resetState()
-                navController.navigate("product_list")
+                // Pass the actual user ID from the successful login
+                navController.navigate("product_list/${state.user.user_id}")
             }
-            else -> {}
+            else -> Unit
         }
     }
 
