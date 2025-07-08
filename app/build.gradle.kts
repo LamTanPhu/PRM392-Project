@@ -95,4 +95,9 @@ dependencies {
     implementation(libs.coil.compose)
     // Material Icons Extended (for FilterList, Sort, Image, AddShoppingCart icons)
     implementation(libs.androidx.compose.material.icons.extended)
+    implementation("com.google.maps.android:maps-compose:4.1.1")
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
+// build.gradle (app)
+    implementation("com.google.firebase:firebase-database:20.3.0")
+
 }

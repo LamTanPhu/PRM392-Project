@@ -1,5 +1,8 @@
 package com.example.project_prm392.UI
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -45,6 +49,9 @@ fun ProductListScreen(
     val products by viewModel.filteredProducts.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val cartItemCount by viewModel.cartItemCount.collectAsState()
+    val storeLocation by viewModel.storeLocation.collectAsState()
+
+    val context = LocalContext.current
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("All") }
@@ -57,13 +64,13 @@ fun ProductListScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Load products on first composition
     LaunchedEffect(Unit) {
         viewModel.loadProducts()
         viewModel.loadCartItemCount(currentUserId)
+        viewModel.loadStoreLocation()
+
     }
 
-    // Show snackbar when message changes
     LaunchedEffect(showSnackbar) {
         if (showSnackbar && snackbarMessage.isNotEmpty()) {
             snackbarHostState.showSnackbar(snackbarMessage)
@@ -77,11 +84,8 @@ fun ProductListScreen(
             TopAppBar(
                 title = { Text("Products") },
                 actions = {
-                    // Cart icon with badge
                     Box {
-                        IconButton(
-                            onClick = { navController.navigate("cart/$currentUserId") }
-                        ) {
+                        IconButton(onClick = { navController.navigate("cart/$currentUserId") }) {
                             Icon(Icons.Default.ShoppingCart, contentDescription = "Cart")
                         }
                         if (cartItemCount > 0) {
@@ -97,8 +101,6 @@ fun ProductListScreen(
                             }
                         }
                     }
-
-                    // Menu
                     IconButton(onClick = { /* TODO: Add menu */ }) {
                         Icon(Icons.Default.Menu, contentDescription = "Menu")
                     }
@@ -107,152 +109,157 @@ fun ProductListScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            // Search Bar
-            SearchBar(
-                query = searchQuery,
-                onQueryChange = {
-                    searchQuery = it
-                    viewModel.searchProducts(it)
-                },
-                onSearch = {
-                    keyboardController?.hide()
-                    viewModel.searchProducts(searchQuery)
-                },
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-
-            // Filter and Sort Row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .fillMaxSize()
+                    .padding(paddingValues)
             ) {
-                FilterChip(
-                    onClick = { showFilterSheet = true },
-                    label = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.FilterList,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Filter")
-                        }
+                SearchBar(
+                    query = searchQuery,
+                    onQueryChange = {
+                        searchQuery = it
+                        viewModel.searchProducts(it)
                     },
-                    selected = selectedCategory != "All"
+                    onSearch = {
+                        keyboardController?.hide()
+                        viewModel.searchProducts(searchQuery)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
                 )
 
-                FilterChip(
-                    onClick = { showSortDialog = true },
-                    label = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.Sort,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Sort")
-                        }
-                    },
-                    selected = false
-                )
-            }
-
-            // Category Filter Chips
-            if (selectedCategory != "All") {
-                LazyRow(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    items(viewModel.getCategories()) { category ->
-                        FilterChip(
-                            onClick = {
-                                selectedCategory = category
-                                viewModel.filterByCategory(category)
-                            },
-                            label = { Text(category) },
-                            selected = selectedCategory == category
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            // Products Grid
-            if (isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            } else if (products.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.outline
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            "No products found",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.outline
-                        )
-                    }
-                }
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(products) { product ->
-                        ProductCard(
-                            product = product,
-                            onAddToCart = {
-                                viewModel.addToCart(
-                                    userId = currentUserId,
-                                    productId = product.product_id,
-                                    onSuccess = {
-                                        snackbarMessage = "Added to cart!"
-                                        showSnackbar = true
-                                    },
-                                    onError = { error ->
-                                        snackbarMessage = error
-                                        showSnackbar = true
-                                    }
-                                )
-                            },
-                            onClick = {
-                                navController.navigate("product_detail/${product.product_id}")
+                    FilterChip(
+                        onClick = { showFilterSheet = true },
+                        label = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.FilterList, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Filter")
                             }
-                        )
+                        },
+                        selected = selectedCategory != "All"
+                    )
+
+                    FilterChip(
+                        onClick = { showSortDialog = true },
+                        label = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Sort, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Sort")
+                            }
+                        },
+                        selected = false
+                    )
+                }
+
+                if (selectedCategory != "All") {
+                    LazyRow(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(viewModel.getCategories()) { category ->
+                            FilterChip(
+                                onClick = {
+                                    selectedCategory = category
+                                    viewModel.filterByCategory(category)
+                                },
+                                label = { Text(category) },
+                                selected = selectedCategory == category
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                if (isLoading) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                } else if (products.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.outline)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text("No products found", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.outline)
+                        }
+                    }
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(products) { product ->
+                            ProductCard(
+                                product = product,
+                                onAddToCart = {
+                                    viewModel.addToCart(
+                                        userId = currentUserId,
+                                        productId = product.product_id,
+                                        onSuccess = {
+                                            snackbarMessage = "Added to cart!"
+                                            showSnackbar = true
+                                        },
+                                        onError = { error ->
+                                            snackbarMessage = error
+                                            showSnackbar = true
+                                        }
+                                    )
+                                },
+                                onClick = {
+                                    navController.navigate("product_detail/${product.product_id}")
+                                }
+                            )
+                        }
                     }
                 }
             }
+
+            // 🗺️ MAP BUTTON
+            FloatingActionButton(
+                onClick = {
+                    storeLocation?.let { store ->
+                        val latitude = store.latitude
+                        val longitude = store.longitude
+                        val label = store.storeName
+                        val gmmIntentUri = Uri.parse("geo:$latitude,$longitude?q=$latitude,$longitude(${Uri.encode(label)})")
+                        val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri).apply {
+                            setPackage("com.google.android.apps.maps")
+                        }
+
+                        try {
+                            context.startActivity(mapIntent)
+                        } catch (e: ActivityNotFoundException) {
+                            val fallbackUri = Uri.parse("https://www.google.com/maps/search/?api=1&query=$latitude,$longitude")
+                            val fallbackIntent = Intent(Intent.ACTION_VIEW, fallbackUri)
+                            context.startActivity(fallbackIntent)
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp),
+                containerColor = MaterialTheme.colorScheme.primary,
+                shape = CircleShape
+            ) {
+                Icon(Icons.Default.Map, contentDescription = "View Store Location")
+            }
+
         }
     }
 
-    // Sort Dialog
     if (showSortDialog) {
         AlertDialog(
             onDismissRequest = { showSortDialog = false },
@@ -275,7 +282,7 @@ fun ProductListScreen(
                             },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(label, modifier = Modifier.fillMaxWidth())
+                            Text(label)
                         }
                     }
                 }
@@ -289,7 +296,6 @@ fun ProductListScreen(
         )
     }
 
-    // Filter Bottom Sheet
     if (showFilterSheet) {
         ModalBottomSheet(
             onDismissRequest = { showFilterSheet = false }
@@ -299,11 +305,7 @@ fun ProductListScreen(
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
-                Text(
-                    "Filter by Category",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
+                Text("Filter by Category", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 16.dp))
 
                 LazyColumn {
                     items(viewModel.getCategories()) { category ->
@@ -356,7 +358,6 @@ fun ProductCard(
                 .fillMaxWidth()
                 .padding(8.dp)
         ) {
-            // Product Image
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -385,7 +386,6 @@ fun ProductCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Product Name
             Text(
                 text = product.name,
                 style = MaterialTheme.typography.titleSmall,
@@ -394,7 +394,6 @@ fun ProductCard(
                 overflow = TextOverflow.Ellipsis
             )
 
-            // Product Price
             Text(
                 text = "$${String.format("%.2f", product.price)}",
                 style = MaterialTheme.typography.titleMedium,
@@ -402,7 +401,6 @@ fun ProductCard(
                 color = MaterialTheme.colorScheme.primary
             )
 
-            // Stock Status
             if (product.stockQuantity > 0) {
                 Text(
                     text = "${product.stockQuantity} in stock",
@@ -419,18 +417,13 @@ fun ProductCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Add to Cart Button
             Button(
                 onClick = onAddToCart,
                 modifier = Modifier.fillMaxWidth(),
                 enabled = product.stockQuantity > 0,
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Icon(
-                    Icons.Default.AddShoppingCart,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
-                )
+                Icon(Icons.Default.AddShoppingCart, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
                 Text("Add to Cart", fontSize = 12.sp)
             }
