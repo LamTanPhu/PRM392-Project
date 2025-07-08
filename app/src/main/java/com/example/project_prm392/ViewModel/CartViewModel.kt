@@ -1,6 +1,8 @@
 package com.example.project_prm392.ViewModel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.project_prm392.DAO.AppRepository
 import com.example.project_prm392.model.CartItem
@@ -21,37 +23,94 @@ class CartViewModel(
     private val userId: Long
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(CartUiState())
+    private val _uiState = MutableStateFlow(CartUiState(isLoading = true))
     val uiState: StateFlow<CartUiState> = _uiState
 
     init {
+        Log.d("CartViewModel", "=== CART VIEWMODEL CREATED ===")
+        Log.d("CartViewModel", "UserId: $userId")
         loadCart()
     }
 
-    fun loadCart() {
-        _uiState.value = _uiState.value.copy(isLoading = true)
+    private fun loadCart() {
+        Log.d("CartViewModel", "=== STARTING CART LOAD ===")
+
+        _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+
         viewModelScope.launch {
             try {
+                Log.d("CartViewModel", "About to call repository.getCartByUserId($userId)")
+
                 val cartItems = repository.getCartByUserId(userId)
-                val itemsWithProducts = cartItems.mapNotNull { cartItem ->
-                    val product = repository.getProductById(cartItem.productId)
-                    if (product != null) cartItem to product else null
-                }
-                val total = itemsWithProducts.sumOf { (cart, product) ->
-                    product.price * cart.quantity
+                Log.d("CartViewModel", "Got ${cartItems.size} cart items")
+
+                // Get the products for each cart item
+                val itemsWithProducts = mutableListOf<Pair<CartItem, Product>>()
+                var totalPrice = 0.0
+
+                for (cartItem in cartItems) {
+                    try {
+                        val product = repository.getProductById(cartItem.productId)
+                        if (product != null) {
+                            itemsWithProducts.add(Pair(cartItem, product))
+                            totalPrice += product.price * cartItem.quantity
+                            Log.d("CartViewModel", "Added item: ${product.name} x${cartItem.quantity} = $${product.price * cartItem.quantity}")
+                        } else {
+                            Log.w("CartViewModel", "Product not found for ID: ${cartItem.productId}")
+                        }
+                    } catch (e: Exception) {
+                        Log.e("CartViewModel", "Error getting product ${cartItem.productId}", e)
+                    }
                 }
 
-                _uiState.value = CartUiState(itemsWithProducts, total)
+                Log.d("CartViewModel", "Final cart: ${itemsWithProducts.size} items, total: $$totalPrice")
+
+                _uiState.value = CartUiState(
+                    items = itemsWithProducts,
+                    total = totalPrice,
+                    isLoading = false,
+                    error = null
+                )
+
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = e.message, isLoading = false)
+                Log.e("CartViewModel", "=== CART LOAD ERROR ===", e)
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = "Failed to load cart: ${e.message}"
+                )
             }
         }
     }
 
     fun removeItem(productId: Long) {
         viewModelScope.launch {
-            repository.removeFromCart(userId, productId)
-            loadCart()
+            try {
+                repository.removeFromCart(userId, productId)
+                loadCart() // Reload the cart after removal
+            } catch (e: Exception) {
+                Log.e("CartViewModel", "Error removing item", e)
+                _uiState.value = _uiState.value.copy(
+                    error = "Failed to remove item: ${e.message}"
+                )
+            }
         }
+    }
+
+    fun refreshCart() {
+        loadCart()
+    }
+}
+
+class CartViewModelFactory(
+    private val repository: AppRepository,
+    private val userId: Long
+) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        Log.d("CartViewModelFactory", "Creating CartViewModel for userId: $userId")
+        if (modelClass.isAssignableFrom(CartViewModel::class.java)) {
+            return CartViewModel(repository, userId) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }
 }
