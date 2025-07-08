@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.example.project_prm392.Controller.ProductListController
+import com.example.project_prm392.ViewModel.ProductListViewModel
 import com.example.project_prm392.model.Product
 import kotlinx.coroutines.launch
 
@@ -39,12 +39,12 @@ import kotlinx.coroutines.launch
 @Composable
 fun ProductListScreen(
     navController: NavController,
-    controller: ProductListController,
-    currentUserId: Long = 1L // You should pass this from your authentication system
+    viewModel: ProductListViewModel,
+    currentUserId: Long = 1L
 ) {
-    val products by controller.filteredProducts.collectAsState()
-    val isLoading by controller.isLoading.collectAsState()
-    val cartItemCount by controller.cartItemCount.collectAsState()
+    val products by viewModel.filteredProducts.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val cartItemCount by viewModel.cartItemCount.collectAsState()
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("All") }
@@ -59,8 +59,8 @@ fun ProductListScreen(
 
     // Load products on first composition
     LaunchedEffect(Unit) {
-        controller.loadProducts()
-        controller.loadCartItemCount(currentUserId)
+        viewModel.loadProducts()
+        viewModel.loadCartItemCount(currentUserId)
     }
 
     // Show snackbar when message changes
@@ -117,11 +117,11 @@ fun ProductListScreen(
                 query = searchQuery,
                 onQueryChange = {
                     searchQuery = it
-                    controller.searchProducts(it)
+                    viewModel.searchProducts(it)
                 },
                 onSearch = {
                     keyboardController?.hide()
-                    controller.searchProducts(searchQuery)
+                    viewModel.searchProducts(searchQuery)
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -175,11 +175,11 @@ fun ProductListScreen(
                     modifier = Modifier.padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(controller.getCategories()) { category ->
+                    items(viewModel.getCategories()) { category ->
                         FilterChip(
                             onClick = {
                                 selectedCategory = category
-                                controller.filterByCategory(category)
+                                viewModel.filterByCategory(category)
                             },
                             label = { Text(category) },
                             selected = selectedCategory == category
@@ -229,7 +229,7 @@ fun ProductListScreen(
                         ProductCard(
                             product = product,
                             onAddToCart = {
-                                controller.addToCart(
+                                viewModel.addToCart(
                                     userId = currentUserId,
                                     productId = product.product_id,
                                     onSuccess = {
@@ -260,17 +260,17 @@ fun ProductListScreen(
             text = {
                 Column {
                     val sortOptions = listOf(
-                        "Name (A-Z)" to ProductListController.SortType.NAME_ASC,
-                        "Name (Z-A)" to ProductListController.SortType.NAME_DESC,
-                        "Price (Low to High)" to ProductListController.SortType.PRICE_LOW_TO_HIGH,
-                        "Price (High to Low)" to ProductListController.SortType.PRICE_HIGH_TO_LOW,
-                        "Newest First" to ProductListController.SortType.NEWEST
+                        "Name (A-Z)" to ProductListViewModel.SortType.NAME_ASC,
+                        "Name (Z-A)" to ProductListViewModel.SortType.NAME_DESC,
+                        "Price (Low to High)" to ProductListViewModel.SortType.PRICE_LOW_TO_HIGH,
+                        "Price (High to Low)" to ProductListViewModel.SortType.PRICE_HIGH_TO_LOW,
+                        "Newest First" to ProductListViewModel.SortType.NEWEST
                     )
 
                     sortOptions.forEach { (label, sortType) ->
                         TextButton(
                             onClick = {
-                                controller.sortProducts(sortType)
+                                viewModel.sortProducts(sortType)
                                 showSortDialog = false
                             },
                             modifier = Modifier.fillMaxWidth()
@@ -306,13 +306,13 @@ fun ProductListScreen(
                 )
 
                 LazyColumn {
-                    items(controller.getCategories()) { category ->
+                    items(viewModel.getCategories()) { category ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
                                     selectedCategory = category
-                                    controller.filterByCategory(category)
+                                    viewModel.filterByCategory(category)
                                     showFilterSheet = false
                                 }
                                 .padding(vertical = 12.dp),
@@ -322,7 +322,7 @@ fun ProductListScreen(
                                 selected = selectedCategory == category,
                                 onClick = {
                                     selectedCategory = category
-                                    controller.filterByCategory(category)
+                                    viewModel.filterByCategory(category)
                                     showFilterSheet = false
                                 }
                             )

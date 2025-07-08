@@ -1,17 +1,17 @@
-package com.example.project_prm392.Controller
+package com.example.project_prm392.ViewModel
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.project_prm392.DAO.AppRepository
-import com.example.project_prm392.model.Product
 import com.example.project_prm392.model.CartItem
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.example.project_prm392.model.Product
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
-class ProductListController(private val repository: AppRepository) {
+class ProductListViewModel(private val repository: AppRepository) : ViewModel() {
+
     private val _products = MutableStateFlow<List<Product>>(emptyList())
     val products: StateFlow<List<Product>> = _products.asStateFlow()
 
@@ -25,14 +25,14 @@ class ProductListController(private val repository: AppRepository) {
     val cartItemCount: StateFlow<Int> = _cartItemCount.asStateFlow()
 
     fun loadProducts() {
-        CoroutineScope(Dispatchers.IO).launch {
+        viewModelScope.launch {
             _isLoading.value = true
             try {
                 val productList = repository.getAllProducts()
                 _products.value = productList
                 _filteredProducts.value = productList
-            } catch (e: Exception) {
-                // Handle error
+            } catch (_: Exception) {
+                // handle error
             } finally {
                 _isLoading.value = false
             }
@@ -43,10 +43,10 @@ class ProductListController(private val repository: AppRepository) {
         val filtered = if (query.isEmpty()) {
             _products.value
         } else {
-            _products.value.filter { product ->
-                product.name.contains(query, ignoreCase = true) ||
-                        product.description?.contains(query, ignoreCase = true) == true ||
-                        product.category?.contains(query, ignoreCase = true) == true
+            _products.value.filter {
+                it.name.contains(query, ignoreCase = true) ||
+                        it.description?.contains(query, ignoreCase = true) == true ||
+                        it.category?.contains(query, ignoreCase = true) == true
             }
         }
         _filteredProducts.value = filtered
@@ -79,33 +79,25 @@ class ProductListController(private val repository: AppRepository) {
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
-        CoroutineScope(Dispatchers.IO).launch {
+        viewModelScope.launch {
             try {
-                val cartItem = CartItem(
-                    userId = userId,
-                    productId = productId,
-                    quantity = quantity
-                )
+                val cartItem = CartItem(userId = userId, productId = productId, quantity = quantity)
                 repository.insertCartItem(cartItem)
                 loadCartItemCount(userId)
-                withContext(Dispatchers.Main) {
-                    onSuccess()
-                }
+                onSuccess()
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    onError("Failed to add to cart: ${e.message}")
-                }
+                onError("Failed to add to cart: ${e.message}")
             }
         }
     }
 
     fun loadCartItemCount(userId: Long) {
-        CoroutineScope(Dispatchers.IO).launch {
+        viewModelScope.launch {
             try {
                 val count = repository.getCartItemCount(userId)
                 _cartItemCount.value = count
-            } catch (e: Exception) {
-                // Handle error
+            } catch (_: Exception) {
+                // ignore
             }
         }
     }
@@ -116,10 +108,6 @@ class ProductListController(private val repository: AppRepository) {
     }
 
     enum class SortType {
-        NAME_ASC,
-        NAME_DESC,
-        PRICE_LOW_TO_HIGH,
-        PRICE_HIGH_TO_LOW,
-        NEWEST
+        NAME_ASC, NAME_DESC, PRICE_LOW_TO_HIGH, PRICE_HIGH_TO_LOW, NEWEST
     }
 }

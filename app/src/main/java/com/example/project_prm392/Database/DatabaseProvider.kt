@@ -52,7 +52,7 @@ object DatabaseProvider {
                 User(
                     username = "testuser",
                     email = "test@example.com",
-                    passwordHash = "password123", // In production, hash passwords!
+                    passwordHash = "password123",
                     fullName = "Test User",
                     phoneNumber = "1234567890"
                 )
