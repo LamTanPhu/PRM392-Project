@@ -23,6 +23,7 @@ import com.example.project_prm392.Database.DatabaseProvider
 import com.example.project_prm392.UI.CartScreen
 import com.example.project_prm392.ViewModel.ProductListViewModel
 import com.example.project_prm392.UI.LoginScreen
+import com.example.project_prm392.UI.MapScreen
 import com.example.project_prm392.UI.ProductDetailScreen
 import com.example.project_prm392.UI.ProductListScreen
 import com.example.project_prm392.UI.SignUpScreen
@@ -30,6 +31,7 @@ import com.example.project_prm392.UI.theme.Project_PRM392Theme
 import com.example.project_prm392.ViewModel.CartViewModel
 import com.example.project_prm392.ViewModel.CartViewModelFactory
 import com.example.project_prm392.ViewModel.LoginViewModel
+import com.example.project_prm392.ViewModel.MapViewModel
 import com.example.project_prm392.ViewModel.ProductDetailViewModel
 import com.example.project_prm392.ViewModel.SignUpViewModel
 
@@ -99,6 +101,10 @@ class MainActivity : ComponentActivity() {
                                         CartScreen(navController = navController, viewModel = cartViewModel)
                                     }
                                 }
+                                composable("map") {
+                                    MapScreen(navController)
+                                }
+
 
                                 composable(
                                     "product_detail/{productId}",

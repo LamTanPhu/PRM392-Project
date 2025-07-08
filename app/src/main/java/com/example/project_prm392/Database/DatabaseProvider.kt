@@ -85,7 +85,7 @@ object DatabaseProvider {
             database.storeLocationDao().insert(
                 StoreLocation(
                     storeName = "Main Store",
-                    address = "123 Tech Street, City",
+                    address = "Ho Chi Minh City",
                     latitude = 10.7769,
                     longitude = 106.7009,
                     phone = "0123456789",

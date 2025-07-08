@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.project_prm392.DAO.AppRepository
 import com.example.project_prm392.model.CartItem
 import com.example.project_prm392.model.Product
+import com.example.project_prm392.model.StoreLocation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,6 +24,9 @@ class ProductListViewModel(private val repository: AppRepository) : ViewModel() 
 
     private val _cartItemCount = MutableStateFlow(0)
     val cartItemCount: StateFlow<Int> = _cartItemCount.asStateFlow()
+
+    private val _storeLocation = MutableStateFlow<StoreLocation?>(null)
+    val storeLocation: StateFlow<StoreLocation?> = _storeLocation.asStateFlow()
 
     fun loadProducts() {
         viewModelScope.launch {
@@ -102,6 +106,16 @@ class ProductListViewModel(private val repository: AppRepository) : ViewModel() 
         }
     }
 
+    fun loadStoreLocation() {
+        viewModelScope.launch {
+            try {
+                val locations = repository.getAllStoreLocations()
+                _storeLocation.value = locations.firstOrNull()
+            } catch (_: Exception) {
+                _storeLocation.value = null
+            }
+        }
+    }
     fun getCategories(): List<String> {
         val categories = _products.value.mapNotNull { it.category }.distinct().sorted()
         return listOf("All") + categories
