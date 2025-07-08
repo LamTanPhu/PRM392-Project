@@ -18,6 +18,8 @@ class AppRepository(private val database: ElectronicStoreDatabase) {
     suspend fun insertCartItem(cartItem: CartItem) = database.cartDao().insert(cartItem)
     suspend fun getCartByUserId(userId: Long) = database.cartDao().getCartByUserId(userId)
     suspend fun getCartItemCount(userId: Long) = database.cartDao().getCartItemCount(userId)
+    suspend fun removeFromCart(userId: Long, productId: Long) =
+        database.cartDao().removeFromCart(userId, productId)
 
     // Order operations
     suspend fun insertOrder(order: Order) = database.orderDao().insert(order)

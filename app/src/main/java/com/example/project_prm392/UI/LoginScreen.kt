@@ -2,21 +2,31 @@ package com.example.project_prm392.UI
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.project_prm392.Controller.LoginController
+import com.example.project_prm392.ViewModel.LoginState
+import com.example.project_prm392.ViewModel.LoginViewModel
 
 @Composable
-fun LoginScreen(navController: NavController, controller: LoginController) {
+fun LoginScreen(navController: NavController, viewModel: LoginViewModel) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
+
+    val loginState by viewModel.loginState.collectAsState()
+
+    LaunchedEffect(loginState) {
+        when (loginState) {
+            is LoginState.Success -> {
+                viewModel.resetState()
+                navController.navigate("product_list")
+            }
+            else -> {}
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -30,7 +40,7 @@ fun LoginScreen(navController: NavController, controller: LoginController) {
             onValueChange = { username = it },
             label = { Text("Username") },
             modifier = Modifier.fillMaxWidth(),
-            enabled = !isLoading
+            enabled = loginState !is LoginState.Loading
         )
         Spacer(modifier = Modifier.height(8.dp))
         TextField(
@@ -39,45 +49,35 @@ fun LoginScreen(navController: NavController, controller: LoginController) {
             label = { Text("Password") },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
-            enabled = !isLoading
+            enabled = loginState !is LoginState.Loading
         )
         Spacer(modifier = Modifier.height(16.dp))
         Button(
             onClick = {
-                isLoading = true
-                errorMessage = ""
-                controller.login(username, password,
-                    onSuccess = { user ->
-                        isLoading = false
-                        // You can pass the user ID or store it in a shared preference/data store
-                        navController.navigate("product_list")
-                    },
-                    onError = {
-                        isLoading = false
-                        errorMessage = it
-                    }
-                )
+                viewModel.login(username, password)
             },
             modifier = Modifier.fillMaxWidth(),
-            enabled = !isLoading && username.isNotBlank() && password.isNotBlank()
+            enabled = username.isNotBlank() && password.isNotBlank() && loginState !is LoginState.Loading
         ) {
-            if (isLoading) {
+            if (loginState is LoginState.Loading) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(16.dp),
                     strokeWidth = 2.dp
                 )
                 Spacer(modifier = Modifier.width(8.dp))
             }
-            Text(if (isLoading) "Logging in..." else "Login")
+            Text(if (loginState is LoginState.Loading) "Logging in..." else "Login")
         }
-        if (errorMessage.isNotEmpty()) {
+
+        if (loginState is LoginState.Error) {
             Spacer(modifier = Modifier.height(8.dp))
-            Text(errorMessage, color = MaterialTheme.colorScheme.error)
+            Text((loginState as LoginState.Error).message, color = MaterialTheme.colorScheme.error)
         }
+
         TextButton(
             onClick = { navController.navigate("signup") },
             modifier = Modifier.align(Alignment.CenterHorizontally),
-            enabled = !isLoading
+            enabled = loginState !is LoginState.Loading
         ) {
             Text("Don't have an account? Sign Up")
         }
