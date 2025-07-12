@@ -11,6 +11,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -20,25 +21,39 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.project_prm392.DAO.AppRepository
 import com.example.project_prm392.Database.DatabaseProvider
+import com.example.project_prm392.UI.BillingScreen
 import com.example.project_prm392.UI.CartScreen
 import com.example.project_prm392.ViewModel.ProductListViewModel
 import com.example.project_prm392.UI.LoginScreen
 import com.example.project_prm392.UI.MapScreen
+import com.example.project_prm392.UI.OrderDetailScreen
 import com.example.project_prm392.UI.ProductDetailScreen
 import com.example.project_prm392.UI.ProductListScreen
 import com.example.project_prm392.UI.SignUpScreen
+import com.example.project_prm392.UI.VNPayResultScreen
+import com.example.project_prm392.UI.VNPayScreen
 import com.example.project_prm392.UI.theme.Project_PRM392Theme
 import com.example.project_prm392.ViewModel.CartViewModel
 import com.example.project_prm392.ViewModel.CartViewModelFactory
 import com.example.project_prm392.ViewModel.LoginViewModel
 import com.example.project_prm392.ViewModel.MapViewModel
+import com.example.project_prm392.ViewModel.OrdersViewModel
+import com.example.project_prm392.ViewModel.PaymentState
+import com.example.project_prm392.ViewModel.PaymentViewModel
+import com.example.project_prm392.ViewModel.PaymentViewModelFactory
 import com.example.project_prm392.ViewModel.ProductDetailViewModel
 import com.example.project_prm392.ViewModel.SignUpViewModel
+import com.example.project_prm392.ViewModel.VNPayResultViewModel
+import com.example.project_prm392.UI.OrdersScreen
+import com.example.project_prm392.ViewModel.OrderDetailViewModel
+import com.example.project_prm392.ViewModel.OrderDetailViewModelFactory
+import com.example.project_prm392.ViewModel.VNPayResultViewModelFactory
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val deepLinkUri = intent?.data
 
         try {
             val database = DatabaseProvider.getDatabase(this)
@@ -58,6 +73,21 @@ class MainActivity : ComponentActivity() {
                             color = MaterialTheme.colorScheme.background
                         ) {
                             val navController = rememberNavController()
+
+                            LaunchedEffect(deepLinkUri) {
+                                deepLinkUri?.let { uri ->
+                                    if (
+                                        uri.scheme == "projectprmpp" &&
+                                        uri.host == "vnpay" &&
+                                        uri.path?.startsWith("/return") == true
+                                    ) {
+                                        val responseCode = uri.getQueryParameter("vnp_ResponseCode") ?: "?"
+                                        val txnRef = uri.getQueryParameter("vnp_TxnRef") ?: "?"
+                                        navController.navigate("vnpay_result/$responseCode/$txnRef")
+                                    }
+                                }
+                            }
+
                             NavHost(navController = navController, startDestination = "login") {
                                 composable("login") {
                                     LoginScreen(navController, loginViewModel)
@@ -98,7 +128,8 @@ class MainActivity : ComponentActivity() {
                                         val cartViewModel: CartViewModel = viewModel(
                                             factory = CartViewModelFactory(repository, userId)
                                         )
-                                        CartScreen(navController = navController, viewModel = cartViewModel)
+                                        CartScreen(navController = navController, viewModel = cartViewModel, userId = userId)
+
                                     }
                                 }
                                 composable("map") {
@@ -124,6 +155,127 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
                                 }
+                                // Billing screen (payment)
+                                composable(
+                                    "billing/{userId}",
+                                    arguments = listOf(navArgument("userId") { type = NavType.LongType })
+                                ) { backStackEntry ->
+                                    val userId = backStackEntry.arguments?.getLong("userId") ?: 0L
+                                    if (userId <= 0) {
+                                        Text("Invalid user ID")
+                                    } else {
+                                        val cartViewModel = viewModel<CartViewModel>(
+                                            factory = CartViewModelFactory(repository, userId)
+                                        )
+                                        val paymentViewModel = viewModel<PaymentViewModel>(
+                                            factory = PaymentViewModelFactory(repository, userId)
+                                        )
+
+                                        val cartState = cartViewModel.uiState.collectAsState().value
+                                        val paymentState = paymentViewModel.paymentState.collectAsState().value
+
+                                        // Navigate to VNPay screen on success
+                                        LaunchedEffect(paymentState) {
+                                            when (val state = paymentState) {
+                                                is PaymentState.Success -> {
+                                                    val totalAmount = cartState.items.sumOf { it.first.quantity * it.second.price }
+                                                    navController.navigate("vnpay_checkout/${state.orderId}/${totalAmount.toFloat()}") {
+                                                        popUpTo("billing/{userId}") { inclusive = true }
+                                                    }
+                                                    paymentViewModel.resetState()
+                                                }
+                                                else -> Unit
+                                            }
+                                        }
+
+
+                                        if (!cartState.isLoading && cartState.items.isNotEmpty()) {
+                                            BillingScreen(
+                                                navController = navController,
+                                                viewModel = paymentViewModel,
+                                                cartItems = cartState.items,
+                                                totalAmount = cartState.total
+                                            )
+                                        } else {
+                                            Text("No items to checkout.")
+                                        }
+                                    }
+                                }
+
+                                // VNPay confirmation screen
+                                composable(
+                                    "vnpay_checkout/{orderId}/{totalAmount}",
+                                    arguments = listOf(
+                                        navArgument("orderId") { type = NavType.LongType },
+                                        navArgument("totalAmount") { type = NavType.FloatType }
+                                    )
+                                ) { backStackEntry ->
+                                    val orderId = backStackEntry.arguments?.getLong("orderId") ?: 0L
+                                    val totalAmount = backStackEntry.arguments?.getFloat("totalAmount")?.toDouble() ?: 0.0
+
+                                    if (orderId > 0 && totalAmount > 0.0) {
+                                        VNPayScreen(navController = navController, orderId = orderId, totalAmount = totalAmount)
+                                    } else {
+                                        Text("Invalid order ID or amount")
+                                    }
+                                }
+
+
+
+                                composable(
+                                    "vnpay_result/{responseCode}/{txnRef}",
+                                    arguments = listOf(
+                                        navArgument("responseCode") { type = NavType.StringType },
+                                        navArgument("txnRef") { type = NavType.StringType }
+                                    )
+                                ) { backStackEntry ->
+                                    val viewModel: VNPayResultViewModel = viewModel(
+                                        factory = VNPayResultViewModelFactory(repository)
+                                    )
+                                    val code = backStackEntry.arguments?.getString("responseCode") ?: "?"
+                                    val txn = backStackEntry.arguments?.getString("txnRef") ?: "?"
+
+                                    LaunchedEffect(Unit) {
+                                        viewModel.setResult(code, txn)
+                                    }
+
+                                    VNPayResultScreen(viewModel = viewModel, navController = navController)
+                                }
+
+                                composable(
+                                    "orders/{userId}",
+                                    arguments = listOf(navArgument("userId") { type = NavType.LongType })
+                                ) { backStackEntry ->
+                                    val userId = backStackEntry.arguments?.getLong("userId") ?: 0L
+                                    val ordersViewModel: OrdersViewModel = viewModel(
+                                        factory = OrdersViewModel.Factory(repository)
+                                    )
+
+                                    LaunchedEffect(userId) {
+                                        ordersViewModel.loadOrders(userId)
+                                    }
+
+                                    OrdersScreen(
+                                        userId = userId,
+                                        repository = repository,
+                                        navController = navController
+                                    )
+                                }
+
+                                composable(
+                                    "order_detail/{orderId}",
+                                    arguments = listOf(navArgument("orderId") { type = NavType.LongType })
+                                ) { backStackEntry ->
+                                    val orderId = backStackEntry.arguments?.getLong("orderId") ?: 0L
+                                    val orderDetailViewModel: OrderDetailViewModel = viewModel(
+                                        factory = OrderDetailViewModelFactory(repository)
+                                    )
+
+                                    OrderDetailScreen(orderId = orderId, viewModel = orderDetailViewModel)
+                                }
+
+
+
                             }
                         }
                     }

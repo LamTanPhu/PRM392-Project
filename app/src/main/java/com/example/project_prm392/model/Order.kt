@@ -29,7 +29,14 @@ data class Order(
 interface OrderDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(order: Order)
+    @Query("SELECT * FROM orders WHERE user_id = :userId ORDER BY order_date DESC LIMIT 1")
+    suspend fun getLatestOrderByUser(userId: Long): Order
 
     @Query("SELECT * FROM orders WHERE user_id = :userId")
     suspend fun getOrdersByUserId(userId: Long): List<Order>
+    @Query("SELECT user_id FROM orders WHERE order_id = :orderId LIMIT 1")
+    suspend fun getUserIdByOrderId(orderId: Long): Long?
+    @Query("UPDATE orders SET status = :status WHERE order_id = :orderId")
+    suspend fun updateOrderStatus(orderId: Long, status: String)
+
 }
