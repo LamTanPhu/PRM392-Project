@@ -81,6 +81,8 @@ fun ProductListScreen(
 
     Scaffold(
         topBar = {
+            var expanded by remember { mutableStateOf(false) }
+
             TopAppBar(
                 title = { Text("Products") },
                 actions = {
@@ -101,11 +103,30 @@ fun ProductListScreen(
                             }
                         }
                     }
-                    IconButton(onClick = { /* TODO: Add menu */ }) {
-                        Icon(Icons.Default.Menu, contentDescription = "Menu")
+                    Box {
+                        IconButton(onClick = { expanded = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Menu")
+                        }
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("My Orders") },
+                                onClick = {
+                                    expanded = false
+                                    navController.navigate("orders/$currentUserId")
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.List, contentDescription = null)
+                                }
+                            )
+                            // You can add more menu items here later
+                        }
                     }
                 }
             )
+
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->

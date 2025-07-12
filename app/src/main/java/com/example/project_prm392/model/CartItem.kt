@@ -44,6 +44,9 @@ interface CartDao {
     @Query("SELECT COUNT(*) FROM cart WHERE user_id = :userId")
     suspend fun getCartItemCount(userId: Long): Int
 
+    @Query("SELECT * FROM cart WHERE user_id = :userId AND product_id = :productId LIMIT 1")
+    suspend fun getCartItem(userId: Long, productId: Long): CartItem?
+
     // Additional useful queries
     @Query("DELETE FROM cart WHERE user_id = :userId AND product_id = :productId")
     suspend fun removeFromCart(userId: Long, productId: Long)

@@ -78,8 +78,21 @@ object DatabaseProvider {
                     stockQuantity = 30,
                     imageUrl = "https://example.com/laptop.jpg",
                     category = "Electronics"
-                )
+                ),
+
             )
+            database.productDao().insert(
+                Product(
+                    name = "Chuột máy tính",
+                    description = "Chuột không dây Logitech",
+                    price = 250_000.0,
+                    stockQuantity = 100,
+                    imageUrl = "https://example.com/mouse.jpg",
+                    category = "Phụ kiện"
+                ),
+
+                )
+
 
             // Sample Store Location
             database.storeLocationDao().insert(

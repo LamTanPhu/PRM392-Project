@@ -35,4 +35,5 @@ abstract class ElectronicStoreDatabase : RoomDatabase() {
     abstract fun orderDao(): OrderDao
     abstract fun orderItemDao(): OrderItemDao
     abstract fun storeLocationDao(): StoreLocationDao
+
 }

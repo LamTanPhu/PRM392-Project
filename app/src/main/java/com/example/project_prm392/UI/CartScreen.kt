@@ -20,7 +20,7 @@ import com.example.project_prm392.ViewModel.CartViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CartScreen(navController: NavController, viewModel: CartViewModel) {
+fun CartScreen(navController: NavController, viewModel: CartViewModel,userId: Long) {
     val state = viewModel.uiState.collectAsState().value
 
     Scaffold(
@@ -111,12 +111,13 @@ fun CartScreen(navController: NavController, viewModel: CartViewModel) {
 
                     Button(
                         onClick = {
-                            // TODO: Navigate to billing screen
+                            navController.navigate("billing/$userId")
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Proceed to Checkout")
                     }
+
                 }
             }
         }

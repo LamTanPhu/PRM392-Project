@@ -76,17 +76,19 @@ class ProductListViewModel(private val repository: AppRepository) : ViewModel() 
         _filteredProducts.value = sorted
     }
 
-    fun addToCart(
-        userId: Long,
-        productId: Long,
-        quantity: Int = 1,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
-    ) {
+    fun addToCart(userId: Long, productId: Long, quantity: Int = 1, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
-                val cartItem = CartItem(userId = userId, productId = productId, quantity = quantity)
-                repository.insertCartItem(cartItem)
+                val existingItem = repository.getCartItem(userId, productId)
+
+                if (existingItem != null) {
+                    val updatedItem = existingItem.copy(quantity = existingItem.quantity + quantity)
+                    repository.updateCartItem(updatedItem)
+                } else {
+                    val newItem = CartItem(userId = userId, productId = productId, quantity = quantity)
+                    repository.insertCartItem(newItem)
+                }
+
                 loadCartItemCount(userId)
                 onSuccess()
             } catch (e: Exception) {
@@ -94,6 +96,8 @@ class ProductListViewModel(private val repository: AppRepository) : ViewModel() 
             }
         }
     }
+
+
 
     fun loadCartItemCount(userId: Long) {
         viewModelScope.launch {
