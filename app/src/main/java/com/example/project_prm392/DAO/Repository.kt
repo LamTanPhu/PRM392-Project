@@ -8,12 +8,22 @@ class AppRepository(private val database: ElectronicStoreDatabase) {
     // User operations
     suspend fun insertUser(user: User) = database.userDao().insert(user)
     suspend fun getUserByUsername(username: String) = database.userDao().getByUsername(username)
+    suspend fun  getUserByUserId(userId:Long)=database.userDao().getByUserId(userId)
+    suspend fun  getAllUser()=database.userDao().getAllUser()
+    suspend fun  updateUser(user:User)=database.userDao().update(user)
+    suspend fun deleteUserById(userId: Long) {
+        database.userDao().deleteById(userId)
+    }
 
     // Product operations
     suspend fun insertProduct(product: Product) = database.productDao().insert(product)
     suspend fun getAllProducts() = database.productDao().getAll()
-    suspend fun getProductById(id: Long) = database.productDao().getById(id)
+    suspend fun deleteProductById(productId: Long) {
+        database.productDao().deleteById(productId)
+    }
 
+    suspend fun getProductById(id: Long) = database.productDao().getById(id)
+    suspend fun  updateProduct(product:Product)=database.productDao().update(product)
     // Cart operations
     suspend fun insertCartItem(cartItem: CartItem) = database.cartDao().insert(cartItem)
     suspend fun getCartByUserId(userId: Long) = database.cartDao().getCartByUserId(userId)

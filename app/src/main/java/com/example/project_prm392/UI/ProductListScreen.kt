@@ -46,6 +46,8 @@ fun ProductListScreen(
     viewModel: ProductListViewModel,
     currentUserId: Long = 1L
 ) {
+    val userRole by viewModel.userRole.collectAsState()
+
     val products by viewModel.filteredProducts.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val cartItemCount by viewModel.cartItemCount.collectAsState()
@@ -65,7 +67,7 @@ fun ProductListScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
-        viewModel.loadProducts()
+        viewModel.loadProducts(currentUserId)
         viewModel.loadCartItemCount(currentUserId)
         viewModel.loadStoreLocation()
 
@@ -121,8 +123,23 @@ fun ProductListScreen(
                                     Icon(Icons.Default.List, contentDescription = null)
                                 }
                             )
-                            // You can add more menu items here later
+
+                            // ✅ Admin Dashboard Button (visible only to admins)
+                            if (userRole == "admin") {
+                                DropdownMenuItem(
+                                    text = { Text("Admin Dashboard") },
+                                    onClick = {
+                                        expanded = false
+                                        navController.navigate("admin_dashboard/${currentUserId}/${userRole}")
+
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.AdminPanelSettings, contentDescription = null)
+                                    }
+                                )
+                            }
                         }
+
                     }
                 }
             )

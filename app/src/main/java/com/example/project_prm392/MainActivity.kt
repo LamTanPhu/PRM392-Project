@@ -1,5 +1,6 @@
 package com.example.project_prm392
 
+
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -21,8 +22,11 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.project_prm392.DAO.AppRepository
 import com.example.project_prm392.Database.DatabaseProvider
+import com.example.project_prm392.UI.AdminDashboardScreen
+
 import com.example.project_prm392.UI.BillingScreen
 import com.example.project_prm392.UI.CartScreen
+
 import com.example.project_prm392.ViewModel.ProductListViewModel
 import com.example.project_prm392.UI.LoginScreen
 import com.example.project_prm392.UI.MapScreen
@@ -45,6 +49,7 @@ import com.example.project_prm392.ViewModel.ProductDetailViewModel
 import com.example.project_prm392.ViewModel.SignUpViewModel
 import com.example.project_prm392.ViewModel.VNPayResultViewModel
 import com.example.project_prm392.UI.OrdersScreen
+import com.example.project_prm392.ViewModel.AdminDashboardViewModel
 import com.example.project_prm392.ViewModel.OrderDetailViewModel
 import com.example.project_prm392.ViewModel.OrderDetailViewModelFactory
 import com.example.project_prm392.ViewModel.VNPayResultViewModelFactory
@@ -273,6 +278,28 @@ class MainActivity : ComponentActivity() {
 
                                     OrderDetailScreen(orderId = orderId, viewModel = orderDetailViewModel)
                                 }
+                                composable(
+                                    route = "admin_dashboard/{userId}/{role}",
+                                    arguments = listOf(
+                                        navArgument("userId") { type = NavType.LongType },
+                                        navArgument("role") { type = NavType.StringType }
+                                    )
+                                ) { backStackEntry ->
+                                    val userId = backStackEntry.arguments?.getLong("userId") ?: 0L
+                                    val role = backStackEntry.arguments?.getString("role") ?: ""
+
+                                    if (role.lowercase() != "admin") {
+                                        Text("Access Denied: You are not authorized to view this page.")
+                                    } else {
+                                        val adminViewModel = viewModel<AdminDashboardViewModel>(
+                                            factory = AdminDashboardViewModel.Factory(repository, userId)
+                                        )
+                                        AdminDashboardScreen(navController = navController, viewModel = adminViewModel)
+                                    }
+                                }
+
+
+
 
 
 

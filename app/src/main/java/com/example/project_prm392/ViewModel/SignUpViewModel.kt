@@ -30,7 +30,8 @@ class SignUpViewModel(private val repository: AppRepository) : ViewModel() {
                 passwordHash = password, // Hash in production
                 fullName = fullName,
                 phoneNumber = phoneNumber,
-                createdAt = Date()
+                createdAt = Date(),
+                role="user"
             )
 
             try {

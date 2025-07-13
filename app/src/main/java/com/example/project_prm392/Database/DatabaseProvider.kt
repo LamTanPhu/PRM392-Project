@@ -54,7 +54,8 @@ object DatabaseProvider {
                     email = "test@example.com",
                     passwordHash = "password123",
                     fullName = "Test User",
-                    phoneNumber = "1234567890"
+                    phoneNumber = "1234567890",
+                    role="admin",
                 )
             )
 
