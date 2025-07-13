@@ -25,4 +25,9 @@ interface ProductDao {
 
     @Query("SELECT * FROM products WHERE product_id = :productId")
     suspend fun getById(productId: Long): Product?
+
+    @Query("DELETE FROM products WHERE product_id = :productId")
+    suspend fun deleteById(productId: Long)
+    @Update
+    suspend fun update(product: Product) // ← This is the update function
 }

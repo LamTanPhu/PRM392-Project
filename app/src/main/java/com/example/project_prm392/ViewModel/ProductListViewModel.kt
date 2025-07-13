@@ -28,11 +28,19 @@ class ProductListViewModel(private val repository: AppRepository) : ViewModel() 
     private val _storeLocation = MutableStateFlow<StoreLocation?>(null)
     val storeLocation: StateFlow<StoreLocation?> = _storeLocation.asStateFlow()
 
-    fun loadProducts() {
+    private val _userRole = MutableStateFlow<String?>(null)
+    val userRole: StateFlow<String?> = _userRole.asStateFlow()
+
+    fun loadProducts(userId: Long) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 val productList = repository.getAllProducts()
+                val user = repository.getUserByUserId(userId)
+                println("👤 User Info -> ID: ${user?.user_id}, Username: ${user?.username}, Role: ${user?.role}")
+
+                _userRole.value = user?.role // ✅ Set the role here
+
                 _products.value = productList
                 _filteredProducts.value = productList
             } catch (_: Exception) {
@@ -42,6 +50,7 @@ class ProductListViewModel(private val repository: AppRepository) : ViewModel() 
             }
         }
     }
+
 
     fun searchProducts(query: String) {
         val filtered = if (query.isEmpty()) {

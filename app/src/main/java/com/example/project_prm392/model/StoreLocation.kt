@@ -20,4 +20,5 @@ interface StoreLocationDao {
 
     @Query("SELECT * FROM store_locations")
     suspend fun getAllLocations(): List<StoreLocation> // For map screen
+
 }
